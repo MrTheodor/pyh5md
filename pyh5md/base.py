@@ -65,7 +65,7 @@ class TimeData(h5py.Group):
             if time_unit is not None:
                 self['time'].attrs.create('unit',data=time_unit)
 
-    def append(self, data, step, time, region=None):
+    def append(self, data, step, time, region=None, collective=False):
         """Appends a time slice to the data group.
 
         region: tuple (start, stop, [step]) for the dimension 0 of the
@@ -91,7 +91,11 @@ class TimeData(h5py.Group):
             sel = h5py._hl.selections.select(v.shape,
                                              (slice(self.current_index,self.current_index+1),slice(*region),Ellipsis),
                                              v.id)
-        v[sel] = data.reshape((1,)+data.shape)
+        if region is not None and collective:
+            with self.value.collective:
+                v[sel] = data.reshape((1,)+data.shape)
+        else:
+            v[sel] = data.reshape((1,)+data.shape)
         s.resize(idx+1, axis=0)
         s[self.current_index] = step
         t.resize(idx+1, axis=0)
